@@ -1,0 +1,18 @@
+---
+title: "main"
+output: html_document
+date: "2023-07-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Starting by importing data
+```{r}
+data <- read.csv("MA_Public_Schools_2017.csv")
+str(data)
+
+sum(is.na(data))
+```
+
