@@ -6,13 +6,21 @@ date: "2023-07-27"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(dplyr)
 ```
 
 Starting by importing data
 ```{r}
-data <- read.csv("MA_Public_Schools_2017.csv")
-str(data)
+data <- read.csv("data/MA_Public_Schools_2017.csv")
 
-sum(is.na(data))
+data$total_sat <- data$Average.SAT_Math + (data$Average.SAT_Reading + data$Average.SAT_Writing) / 2
+
+data_hs <- data[, -c(98:293)]
+data_hs <- data_hs[which(!is.na(data_hs$Average.SAT_Math)), ]
+data_hs <- data_hs %>% select(-School.Type, Function, State, Address.2, Phone, Fax)
+data_hs <- data_hs[, -c(79:92)]
+
+names(data_hs)
 ```
 

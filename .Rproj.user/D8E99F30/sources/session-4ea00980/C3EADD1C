@@ -1,11 +1,11 @@
 {
     "id": "C3EADD1C",
-    "path": null,
-    "project_path": null,
+    "path": "C:/Users/nicol/OneDrive/Desktop/Wharton_DSA/Final_Project/main.rmd",
+    "project_path": "main.rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "1209240804",
     "contents": "",
-    "dirty": true,
+    "dirty": false,
     "created": 1690482254357.0,
     "source_on_save": false,
     "relative_order": 1,
@@ -13,16 +13,16 @@
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "1,13",
-        "scrollLine": "1",
-        "last_setup_crc32": "4ea00980bb338d19"
+        "cursorPosition": "17,0",
+        "scrollLine": "5",
+        "last_setup_crc32": "4ea00980110fc545"
     },
     "folds": "",
-    "lastKnownWriteTime": 8031079694196110195,
-    "encoding": "",
+    "lastKnownWriteTime": 1690492119,
+    "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1690482753989,
+    "last_content_update": 1690492119810,
     "read_only": false,
     "read_only_alternatives": []
 }
