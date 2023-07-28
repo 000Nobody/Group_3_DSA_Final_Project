@@ -7,20 +7,46 @@ date: "2023-07-27"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(dplyr)
+pacman::p_load(dplyr, ggplot2)
 ```
 
-Starting by importing data
+**Starting by importing and cleaning data**
+
 ```{r}
 data <- read.csv("data/MA_Public_Schools_2017.csv")
 
-data$total_sat <- data$Average.SAT_Math + (data$Average.SAT_Reading + data$Average.SAT_Writing) / 2
-
-data_hs <- data[, -c(98:293)]
-data_hs <- data_hs[which(!is.na(data_hs$Average.SAT_Math)), ]
+# Remove MCAS, AP columns
+data_hs <- data[, -c(98:293, 80:93)]
+# Remove unnecessary columns
 data_hs <- data_hs %>% select(-School.Type, Function, State, Address.2, Phone, Fax)
-data_hs <- data_hs[, -c(79:92)]
+# Remove all schools which do not report SAT scores (mainly non-high schools)
+data_hs <- data_hs[which(!is.na(data_hs$Average.SAT_Math)), ]
+# Convert SAT scores to 1600 scale
+data_hs$total_sat <- (data_hs$Average.SAT_Math + data_hs$Average.SAT_Reading + data_hs$Average.SAT_Writing) * (2/3)
 
 names(data_hs)
+data_hs[which.max(data_hs$X..Dropped.Out), ]$X..Dropped.Out
+
+summary(data_hs$X..Dropped.Out)
 ```
 
+**Basic EDA**
+
+```{r}
+depend_vars <- data_hs %>% 
+  summarise(name = School.Name, sat = total_sat, grad_rate = X..Graduated, college_rate = X..Attending.College)
+
+depend_vars %>% ggplot(aes(x = sat)) + 
+  geom_histogram(bins = 20, fill = "blue", col = "black") + 
+  labs(title = "Average SAT Histogram")
+
+depend_vars %>% ggplot(aes(x = grad_rate)) + 
+  geom_histogram(bins = 50, fill = "blue", col = "black") + 
+  labs(title = "Graduation Rate Histogram")
+
+depend_vars %>% ggplot(aes(x = college_rate)) + 
+  geom_histogram(bins = 30, fill = "blue", col = "black") + 
+  labs(title = "College Attendance Rate Histogram")
+
+depend_vars[which.min(depend_vars$grad_rate), ]$grad_rate
+```
