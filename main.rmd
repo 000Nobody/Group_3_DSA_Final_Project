@@ -7,7 +7,7 @@ date: "2023-07-27"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(dplyr, ggplot2)
+pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor)
 ```
 
 **Starting by importing and cleaning data**
@@ -17,28 +17,41 @@ data <- read.csv("data/MA_Public_Schools_2017.csv")
 
 # Remove MCAS, AP columns
 data_hs <- data[, -c(98:293, 80:93)]
-# Remove unnecessary columns
-data_hs <- data_hs %>% select(-School.Type, Function, State, Address.2, Phone, Fax)
-# Remove all schools which do not report SAT scores (mainly non-high schools)
-data_hs <- data_hs[which(!is.na(data_hs$Average.SAT_Math)), ]
-# Convert SAT scores to 1600 scale
-data_hs$total_sat <- (data_hs$Average.SAT_Math + data_hs$Average.SAT_Reading + data_hs$Average.SAT_Writing) * (2/3)
+
+# Select only high schools, create total_sat column, remove NAs and blank vals, clean column names
+data_hs <- data_hs %>% 
+  filter(
+    Grade == "09,10,11,12"
+  ) %>% 
+  select(-c(
+    Function, 
+    State, 
+    Address.2, 
+    Phone, 
+    Fax, 
+    Contact.Name, 
+    School.Code)
+  ) %>%
+  mutate(total_sat = (
+    Average.SAT_Math + Average.SAT_Reading + Average.SAT_Writing) * (2/3)
+  ) %>% 
+  remove_empty(which = c("cols", "rows")) %>% 
+  drop_na() %>%
+  clean_names()
 
 names(data_hs)
-data_hs[which.max(data_hs$X..Dropped.Out), ]$X..Dropped.Out
-
-summary(data_hs$X..Dropped.Out)
 ```
 
 **Basic EDA**
 
 ```{r}
 depend_vars <- data_hs %>% 
-  summarise(name = School.Name, sat = total_sat, grad_rate = X..Graduated, college_rate = X..Attending.College)
+  summarise(name = school_name, sat = total_sat, grad_rate = x_graduated, college_rate = x_attending_college)
 
+# Graphing the distribution of dependent variables
 depend_vars %>% ggplot(aes(x = sat)) + 
   geom_histogram(bins = 20, fill = "blue", col = "black") + 
-  labs(title = "Average SAT Histogram")
+  labs(title = "Average SAT Histogram", x = "Average SAT Score", y = "Frequency")
 
 depend_vars %>% ggplot(aes(x = grad_rate)) + 
   geom_histogram(bins = 50, fill = "blue", col = "black") + 
@@ -47,6 +60,23 @@ depend_vars %>% ggplot(aes(x = grad_rate)) +
 depend_vars %>% ggplot(aes(x = college_rate)) + 
   geom_histogram(bins = 30, fill = "blue", col = "black") + 
   labs(title = "College Attendance Rate Histogram")
+```
 
-depend_vars[which.min(depend_vars$grad_rate), ]$grad_rate
+**LASSO Model for SAT**
+
+```{r}
+indep_vars <- data_hs %>% select(-c(
+  school_name,
+  grade,
+  address_1
+)) %>% 
+  mutate_if(is.character, as.factor)
+
+X <- as.matrix(indep_vars[, c("average_salary", "sat_tests_taken", "number_of_students")])
+Y.sat <- indep_vars$total_sat
+
+lasso_sat <- cv.glmnet(x = X, y = Y.sat, alpha = .99)
+
+plot(lasso_sat)
+summary(lasso_sat)
 ```
