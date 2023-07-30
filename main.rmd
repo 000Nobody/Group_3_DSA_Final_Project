@@ -62,6 +62,15 @@ depend_vars %>% ggplot(aes(x = college_rate)) +
   labs(title = "College Attendance Rate Histogram")
 ```
 
+**Importing Crime Data**
+
+```{r}
+crime_data <- read.csv("data/MA_Crime.csv")
+crime_data <- crime_data %>% clean_names()
+# crime_data_per_capita <- crime_data[, c(3:12)] / data.frame(crime_data$population
+# names(crime_data)
+```
+
 **LASSO Model for SAT**
 
 ```{r}
