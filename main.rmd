@@ -62,6 +62,18 @@ depend_vars %>% ggplot(aes(x = college_rate)) +
   labs(title = "College Attendance Rate Histogram")
 ```
 
+**Linear Model and ANOVA**
+```{r}
+library(car)
+data1 <- cbind(depend_vars, indep_vars)
+
+#remove colinear varables
+data1 <- data1 %>% 
+  select(-c(average_sat_reading, average_sat_writing, average_sat_math, total_sat))
+
+fit <- lm(sat~., data = new)
+Anova(fit)
+```
 **Importing Crime Data**
 
 ```{r}
