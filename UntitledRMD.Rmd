@@ -1,0 +1,90 @@
+---
+title: "main"
+output: html_document
+date: "2023-07-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor)
+```
+
+**Starting by importing and cleaning data**
+
+```{r}
+data <- read.csv("MA_Public_Schools_2017.csv")
+
+# Remove MCAS, AP columns
+data_hs <- data[, -c(98:293, 80:93)]
+
+# Select only high schools, create total_sat column, remove NAs and blank vals, clean column names
+data_hs <- data_hs %>% 
+  filter(
+    Grade == "09,10,11,12"
+  ) %>% 
+  select(-c(
+    Function, 
+    State, 
+    Address.2, 
+    Phone, 
+    Fax, 
+    Contact.Name, 
+    School.Code)
+  ) %>%
+  mutate(total_sat = (
+    Average.SAT_Math + Average.SAT_Reading + Average.SAT_Writing) * (2/3)
+  ) %>% 
+  remove_empty(which = c("cols", "rows")) %>% 
+  drop_na() %>%
+  clean_names()
+
+names(data_hs)
+```
+
+
+
+```{r}
+#Linear Model of gender vs. SAT score
+sat_model <- step(lm(total_sat ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs), direction="backward")
+summary(sat_model)
+plot(total_sat ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs)
+```
+
+
+```{r}
+#Linear Model for graduation rate
+grad_model <- step(lm(x_graduated~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs),direction = "backward")
+summary(grad_model)
+plot(x_graduated ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs)
+```
+
+```{r}
+college_model <- step(lm(x_attending_college~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs),direction = "backward")
+summary(college_model)
+plot(x_attending_college ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs)
+```
+
+
+```{r}
+cor(data_hs[c("x_african_american","x_hispanic","x_first_language_not_english","students_with_disabilities","x_females","x_graduated","total_sat","x_attending_college")])
+```
+
+
+```{r}
+data_hs$graduation_binary=ifelse(data_hs$x_graduated>=75,1,0)
+model3 <- glm(graduation_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
+summary(model3)
+```
+```{r}
+data_hs$sat_binary=ifelse(data_hs$total_sat>=1058,1,0)
+model4 <- glm(sat_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
+summary(model4)
+```
+
+```{r}
+data_hs$college_binary=ifelse(data_hs$x_attending_college>=75,1,0)
+model5 <- glm(college_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
+summary(model5)
+```
+- for example: the more females there are, the more likely that a school will have a 75% graduation rate
