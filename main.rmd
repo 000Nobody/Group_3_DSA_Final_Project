@@ -7,21 +7,26 @@ date: "2023-07-27"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor)
+pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor, leaps)
 ```
 
 **Starting by importing and cleaning data**
 
 ```{r}
-data <- read.csv("data/MA_Public_Schools_2017.csv")
+data <- read.csv("data/MA_Public_Schools_2017.csv", stringsAsFactors = T)
 
 # Remove MCAS, AP columns
+
 data_hs <- data[, -c(98:293, 80:93)]
 
-# Select only high schools, create total_sat column, remove NAs and blank vals, clean column names
+data_hs <- data[, -c(299:300, 98:295, 80:93, 16:25)]
+# names(data_hs)
+
+
+# Select only schools with high schoolers enrolled, clean column names
 data_hs <- data_hs %>% 
   filter(
-    Grade == "09,10,11,12"
+    (data_hs$X9_Enrollment !=0 | data_hs$X10_Enrollment !=0 | data_hs$X11_Enrollment !=0 | data_hs$X12_Enrollment !=0)
   ) %>% 
   select(-c(
     Function, 
@@ -30,34 +35,76 @@ data_hs <- data_hs %>%
     Phone, 
     Fax, 
     Contact.Name, 
-    School.Code)
-  ) %>%
-  mutate(total_sat = (
-    Average.SAT_Math + Average.SAT_Reading + Average.SAT_Writing) * (2/3)
+    School.Code, 
+    SP_Enrollment, 
+    TOTAL_Enrollment, 
+    First.Language.Not.English, 
+    English.Language.Learner, 
+    Students.With.Disabilities, 
+    High.Needs, 
+    Economically.Disadvantaged, 
+    Number.of.Students, 
+    High.School.Graduates...., 
+    Attending.Coll..Univ.....)
   ) %>% 
-  remove_empty(which = c("cols", "rows")) %>% 
-  drop_na() %>%
+  mutate(total_hs_enrollment = (
+    X9_Enrollment + X10_Enrollment + X11_Enrollment + X12_Enrollment)
+  ) %>% 
   clean_names()
 
-names(data_hs)
+
+#create new data frame with average total sat score, remove NAs
+data_hs_sat <- data_hs %>% 
+  mutate(total_sat = (
+    average_sat_math + average_sat_reading + average_sat_writing) * (2/3)
+  ) %>% 
+  select(-c(average_sat_math, 
+            average_sat_reading, 
+            average_sat_writing)) %>% 
+  remove_empty(which = c("cols", "rows")) %>%
+  drop_na()
+
+data_hs_gradrate <- data_hs %>% 
+  filter(is.na(x_graduated) == F)
+
+data_hs_college <- data_hs %>% 
+  filter(is.na(x_attending_college) == F) %>% 
+  select(-c(x_private_two_year, 
+            x_private_four_year, 
+            x_public_two_year, 
+            x_public_four_year, 
+            x_ma_community_college, 
+            x_ma_state_university, 
+            x_u_mass))
+  
+
+# dim(data_hs_sat)
+# dim(data_hs_gradrate)
+# dim(data_hs_college)
+
+# Split data into training and testing 
+picked = sample(seq_len(nrow(data_hs)), size = 150)
+data.training = data_hs[picked,]
+data.testing = data_hs[-picked,]
+
 ```
 
 **Basic EDA**
 
 ```{r}
-depend_vars <- data_hs %>% 
+depend_vars <- data_hs_sat %>% 
   summarise(name = school_name, sat = total_sat, grad_rate = x_graduated, college_rate = x_attending_college)
 
 # Graphing the distribution of dependent variables
-depend_vars %>% ggplot(aes(x = sat)) + 
+data_hs_sat %>% ggplot(aes(x = total_sat)) + 
   geom_histogram(bins = 20, fill = "blue", col = "black") + 
   labs(title = "Average SAT Histogram", x = "Average SAT Score", y = "Frequency")
 
-depend_vars %>% ggplot(aes(x = grad_rate)) + 
+data_hs_gradrate %>% ggplot(aes(x = x_graduated)) + 
   geom_histogram(bins = 50, fill = "blue", col = "black") + 
   labs(title = "Graduation Rate Histogram")
 
-depend_vars %>% ggplot(aes(x = college_rate)) + 
+data_hs_college %>% ggplot(aes(x = x_attending_college)) + 
   geom_histogram(bins = 30, fill = "blue", col = "black") + 
   labs(title = "College Attendance Rate Histogram")
 ```
@@ -65,14 +112,20 @@ depend_vars %>% ggplot(aes(x = college_rate)) +
 **Linear Model and ANOVA**
 ```{r}
 library(car)
-data1 <- cbind(depend_vars, indep_vars)
+data_hs_sat
 
 #remove colinear varables
-data1 <- data1 %>% 
-  select(-c(average_sat_reading, average_sat_writing, average_sat_math, total_sat))
+data1 <- data_hs_sat %>% 
+  mutate(zip = as.factor(zip), 
+         district_code = as.factor(district_code)) 
+# data1[9:12] <-  lapply(data1[9:12], as.numeric)
+# data1[59] <-  lapply(data1[59], as.numeric)
+data1 <- data1 %>% select(-c(school_type, town, school_name, address_1, grade, district_name, zip, district_code))
+  
 
-fit <- lm(sat~., data = new)
+fit <- step(lm(total_sat ~ ., data = data1), direction = c("backward"))
 Anova(fit)
+summary(fit)
 ```
 **Importing Crime Data**
 
