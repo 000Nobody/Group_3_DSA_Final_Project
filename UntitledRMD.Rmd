@@ -13,7 +13,7 @@ pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor)
 **Starting by importing and cleaning data**
 
 ```{r}
-data <- read.csv("MA_Public_Schools_2017.csv")
+data <- read.csv("data/MA_Public_Schools_2017.csv")
 
 # Remove MCAS, AP columns
 data_hs <- data[, -c(98:293, 80:93)]
@@ -45,7 +45,7 @@ names(data_hs)
 
 
 ```{r}
-#Linear Model of gender vs. SAT score
+#Linear Model for SAT score
 sat_model <- step(lm(total_sat ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs), direction="backward")
 summary(sat_model)
 plot(total_sat ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs)
@@ -60,6 +60,7 @@ plot(x_graduated ~ x_african_american+x_hispanic+x_first_language_not_english+st
 ```
 
 ```{r}
+#Linear model for attending college
 college_model <- step(lm(x_attending_college~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs),direction = "backward")
 summary(college_model)
 plot(x_attending_college ~ x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs)
@@ -72,17 +73,20 @@ cor(data_hs[c("x_african_american","x_hispanic","x_first_language_not_english","
 
 
 ```{r}
+#Logistic regression for graduation rate
 data_hs$graduation_binary=ifelse(data_hs$x_graduated>=75,1,0)
 model3 <- glm(graduation_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
 summary(model3)
 ```
 ```{r}
+#Logistic regression for SAT score
 data_hs$sat_binary=ifelse(data_hs$total_sat>=1058,1,0)
 model4 <- glm(sat_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
 summary(model4)
 ```
 
 ```{r}
+#Logistic regression for college rates
 data_hs$college_binary=ifelse(data_hs$x_attending_college>=75,1,0)
 model5 <- glm(college_binary~x_african_american+x_hispanic+x_first_language_not_english+students_with_disabilities+x_females, data=data_hs, family="binomial")
 summary(model5)
