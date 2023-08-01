@@ -16,7 +16,8 @@ pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor)
 data <- read.csv("data/MA_Public_Schools_2017.csv")
 
 # Remove MCAS, AP columns
-data_hs <- data[, -c(98:293, 80:93)]
+data_hs <- data[, -c(98:293, 80:93, 16:25)]
+names(data_hs)
 
 # Select only high schools, create total_sat column, remove NAs and blank vals, clean column names
 data_hs <- data_hs %>% 
@@ -35,11 +36,16 @@ data_hs <- data_hs %>%
   mutate(total_sat = (
     Average.SAT_Math + Average.SAT_Reading + Average.SAT_Writing) * (2/3)
   ) %>% 
-  remove_empty(which = c("cols", "rows")) %>% 
+  remove_empty(which = c("cols", "rows")) %>%
   drop_na() %>%
   clean_names()
 
-names(data_hs)
+dim(data_hs)
+
+# Split data into training and testing 
+picked = sample(seq_len(nrow(data_hs)), size = 150)
+data.training = data_hs[picked,]
+data.testing = data_hs[-picked,]
 ```
 
 **Basic EDA**
@@ -47,6 +53,20 @@ names(data_hs)
 ```{r}
 depend_vars <- data_hs %>% 
   summarise(name = school_name, sat = total_sat, grad_rate = x_graduated, college_rate = x_attending_college)
+
+indep_vars <- data_hs %>% select(-c(
+  school_name,
+  grade,
+  address_1,
+  school_type,
+  zip,
+  town,
+  average_sat_math,
+  average_sat_reading,
+  average_sat_writing,
+  district_name
+)) %>% 
+  mutate_if(is.character, as.factor)
 
 # Graphing the distribution of dependent variables
 depend_vars %>% ggplot(aes(x = sat)) + 
@@ -60,6 +80,11 @@ depend_vars %>% ggplot(aes(x = grad_rate)) +
 depend_vars %>% ggplot(aes(x = college_rate)) + 
   geom_histogram(bins = 30, fill = "blue", col = "black") + 
   labs(title = "College Attendance Rate Histogram")
+
+indep_vars %>% ggplot(aes(x = salary_totals)) + 
+  geom_histogram(bins = 30, fill = "blue", col = "black") + 
+  labs(title = "Average Salary Histogram")
+
 ```
 
 **Importing Crime Data**
@@ -74,18 +99,15 @@ crime_data <- crime_data %>% clean_names()
 **LASSO Model for SAT**
 
 ```{r}
-indep_vars <- data_hs %>% select(-c(
-  school_name,
-  grade,
-  address_1
-)) %>% 
-  mutate_if(is.character, as.factor)
+set.seed(1)
 
-X <- as.matrix(indep_vars[, c("average_salary", "sat_tests_taken", "number_of_students")])
+# str(indep_vars)
+
+X.sat <- model.matrix(total_sat ~ ., data = indep_vars)
 Y.sat <- indep_vars$total_sat
 
-lasso_sat <- cv.glmnet(x = X, y = Y.sat, alpha = .99)
+lasso_sat <- cv.glmnet(x = X.sat, y = Y.sat, alpha = .99, nfolds = 10)
 
 plot(lasso_sat)
-summary(lasso_sat)
+coef(lasso_sat, s = "lambda.1se")
 ```
