@@ -7,7 +7,7 @@ date: "2023-07-27"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor, MASS)
+pacman::p_load(dplyr, ggplot2, glmnet, tidyverse, janitor, MASS, sjPlot, randomForest)
 ```
 
 **Starting by importing and cleaning data**
@@ -144,7 +144,8 @@ data_hs_college <- data_hs.training %>%
   drop_na()
   
 
-# dim(data_hs_sat)
+# dim(data_hs)
+# names(data_hs_sat)
 # dim(data_hs_gradrate)
 # dim(data_hs_college)
 ```
@@ -152,23 +153,6 @@ data_hs_college <- data_hs.training %>%
 **Basic EDA**
 
 ```{r}
-depend_vars <- data_hs_sat %>% 
-  summarise(name = school_name, sat = total_sat, grad_rate = x_graduated, college_rate = x_attending_college)
-
-indep_vars <- data_hs %>% dplyr::select(-c(
-  school_name,
-  grade,
-  address_1,
-  school_type,
-  zip,
-  town,
-  average_sat_math,
-  average_sat_reading,
-  average_sat_writing,
-  district_name
-)) %>% 
-  mutate_if(is.character, as.factor)
-
 # Graphing the distribution of dependent variables
 data_hs_sat %>% ggplot(aes(x = total_sat)) + 
   geom_histogram(bins = 20, fill = "blue", col = "black") + 
@@ -182,7 +166,7 @@ data_hs_college %>% ggplot(aes(x = x_attending_college)) +
   geom_histogram(bins = 30, fill = "blue", col = "black") + 
   labs(title = "College Attendance Rate Histogram")
 
-indep_vars %>% ggplot(aes(x = salary_totals)) + 
+data_hs %>% ggplot(aes(x = salary_totals)) + 
   geom_histogram(bins = 30, fill = "blue", col = "black") + 
   labs(title = "Average Salary Histogram")
 ```
@@ -210,7 +194,7 @@ model.sat <- stepAIC(fit.sat, direction = "both", trace = FALSE)
 summary(model.sat)
 plot(model.sat)
 
-sat_test_result <- data.frame(predicted = predict(model.min.sat, data_hs.testing), actual = data_hs.testing$total_sat)
+sat_test_result <- data.frame(predicted = predict(model.sat, data_hs.testing), actual = data_hs.testing$total_sat)
 plot(x = sat_test_result$predicted, y = sat_test_result$actual)
 
 sjPlot::plot_model(model.sat, type = 'pred', terms = c('x_economically_disadvantaged'))
@@ -262,4 +246,81 @@ model.coll <- stepAIC(fit.coll, direction = "both", trace = FALSE)
 summary(model.coll)
 plot(model.coll)
 ```
+**Random Forest for SAT**
+```{r}
+set.seed(1)
+rf.error.p.sat <- 1:19 # set up a vector of length 19
+for (p in 1:19){ # repeat the following code inside { } 19 times 
+fit.rf.sat <- randomForest(total_sat~., data_hs_sat, mtry=p, ntree=500) #plot(fit.rf, col= p, lwd = 3)
+rf.error.p.sat[p] <- fit.rf.sat$mse[500]}
+# collecting oob mse based on 250 trees
 
+# rf.error.p.sat 
+plot(1:19, rf.error.p.sat, pch=16,
+main = "Testing errors of mtry with 250 trees", xlab="mtry",
+ylab="OOB mse of mtry")
+lines(1:19, rf.error.p.sat)
+
+
+fit.rf.sat <- randomForest(total_sat~., data_hs_sat, mtry=19, ntree=500)
+plot(fit.rf.sat, col="red", pch=16, type="p",
+main="default plot, ")
+
+
+
+
+plot(x = (predict(fit.rf.sat, data_hs.testing)), y = data_hs.testing$total_sat)
+
+
+```
+
+**Random Forest for Grad Rate**
+```{r}
+set.seed(1)
+
+rf.error.p.gradrate <- 1:19
+for (p in 1:19){ # repeat the following code inside { } 19 times 
+fit.rf.gradrate <- randomForest(x_graduated~., data_hs_gradrate, mtry=20, ntree=500) #plot(fit.rf, col= p, lwd = 3)
+rf.error.p.gradrate[p] <- fit.rf.gradrate$mse[500] # collecting oob mse based on 250 trees
+}
+# rf.error.p.gradrate
+
+plot(1:19, rf.error.p.gradrate, pch=16,
+main = "Testing errors of mtry with 250 trees", xlab="mtry",
+ylab="OOB mse of mtry")
+lines(1:19, rf.error.p.gradrate)
+
+fit.rf.gradrate <- randomForest(x_graduated~., data_hs_gradrate, mtry=7, ntree=500)
+plot(fit.rf.gradrate, col="red", pch=16, type="p",
+main="default plot, ")
+
+
+plot(x = (predict(fit.rf.gradrate, data_hs.testing)), y = data_hs.testing$x_graduated)
+
+
+```
+
+**Random Forest for College Attendance Rate**
+```{r}
+set.seed(1)
+rf.error.p.college <- 1:19
+for (p in 1:19){ # repeat the following code inside { } 19 times 
+fit.rf.college <- randomForest(x_attending_college~., data_hs_college, mtry=20, ntree=500) #plot(fit.rf, col= p, lwd = 3)
+rf.error.p.college[p] <- fit.rf.college$mse[500] # collecting oob mse based on 250 trees
+}
+# rf.error.p.gradrate
+
+plot(1:19, rf.error.p.college, pch=16,
+main = "Testing errors of mtry with 250 trees", xlab="mtry",
+ylab="OOB mse of mtry")
+lines(1:19, rf.error.p.college)
+
+fit.rf.college <- randomForest(x_attending_college~., data_hs_college, mtry=6, ntree=500)
+plot(fit.rf.gradrate, col="red", pch=16, type="p",
+main="default plot, ")
+
+
+plot(x = (predict(fit.rf.college, data_hs.testing)), y = data_hs.testing$x_attending_college)
+
+
+```
