@@ -112,10 +112,9 @@ data_hs_college %>% ggplot(aes(x = x_attending_college)) +
 **Linear Model and ANOVA**
 ```{r}
 library(car)
-data_hs_sat
 
 #remove colinear varables
-data1 <- data_hs_sat %>% 
+data1 <- data_hs_sat -%>% 
   mutate(zip = as.factor(zip), 
          district_code = as.factor(district_code)) 
 # data1[9:12] <-  lapply(data1[9:12], as.numeric)
