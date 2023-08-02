@@ -43,7 +43,8 @@ data_hs <- data_hs %>%
     Number.of.Students, 
     High.School.Graduates...., 
     Attending.Coll..Univ.....,
-    Total.Expenditures)
+    Total.Expenditures,
+    X..High.Needs)
   ) %>% 
   mutate(total_hs_enrollment = (
     X9_Enrollment + X10_Enrollment + X11_Enrollment + X12_Enrollment), 
@@ -199,7 +200,7 @@ Y.sat <- data_hs_sat$total_sat
 lasso_sat <- cv.glmnet(x = X.sat, y = Y.sat, alpha = .99, nfolds = 10)
 plot(lasso_sat)
 
-coef.sat <- coef(lasso_sat, s="lambda.min")
+coef.sat <- coef(lasso_sat, s="lambda.1se")
 coef.sat <- coef.sat[which(coef.sat !=0),]
 var.sat <- rownames(as.matrix(coef.sat))[-1]
 
@@ -214,6 +215,7 @@ sat_test_result <- data.frame(predicted = predict(model.min.sat, data_hs.testing
 plot(x = sat_test_result$predicted, y = sat_test_result$actual)
 
 sjPlot::plot_model(model.sat, type = 'pred', terms = c('x_economically_disadvantaged'))
+
 ```
 
 **LASSO Model for Graduation Rate**
@@ -226,7 +228,7 @@ Y.grad <- data_hs_gradrate$x_graduated
 lasso_grad <- cv.glmnet(x = X.grad, y = Y.grad, alpha = .99, nfolds = 10)
 plot(lasso_grad)
 
-coef.grad <- coef(lasso_grad, s="lambda.min")
+coef.grad <- coef(lasso_grad, s="lambda.1se")
 coef.grad <- coef.grad[which(coef.grad !=0),]
 var.grad <- rownames(as.matrix(coef.grad))[-1]
 
@@ -261,5 +263,43 @@ fit.coll <- lm(x_attending_college ~ ., data = data_hs_college.sub)
 model.coll <- stepAIC(fit.coll, direction = "both", trace = FALSE)
 summary(model.coll)
 plot(model.coll)
+```
+
+**Linear Models with theoretically important variables**
+```{r}
+data_hs.lm_training <- data_hs.training %>% 
+  dplyr::select(c(
+    average_class_size,
+    x_economically_disadvantaged,
+    x_english_language_learner,
+    average_expenditures_per_pupil,
+    x_females,
+    average_salary,
+    x_students_with_disabilities,
+    average_in_district_expenditures_per_pupil,
+    x_first_language_not_english,
+    violent_crime,
+    total_sat,
+    x_graduated,
+    x_attending_college
+  )) %>% drop_na()
+
+indep_vars.sat <- data_hs.lm_training %>% dplyr::select(-c(x_graduated, x_attending_college))
+lm.sat <- lm(total_sat ~ ., data = indep_vars.sat)
+summary(lm.sat)
+
+indep_vars.grad <- data_hs.lm_training %>% dplyr::select(-c(total_sat, x_attending_college))
+lm.grad <- lm(x_graduated ~ ., data = indep_vars.grad)
+summary(lm.grad)
+
+indep_vars.coll <- data_hs.lm_training %>% dplyr::select(-c(x_graduated, total_sat))
+lm.coll <- lm(x_attending_college ~ ., data = indep_vars.coll)
+summary(lm.coll)
+```
+
+
+**Nueral Net**
+```{r}
+
 ```
 
