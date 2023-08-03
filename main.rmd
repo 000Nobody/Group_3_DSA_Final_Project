@@ -266,8 +266,8 @@ fit.rf.sat <- randomForest(total_sat~., data_hs_sat, mtry=19, ntree=500)
 plot(fit.rf.sat, col="red", pch=16, type="p",
 main="default plot, ")
 
-
-
+residuals.sat.rf <- predict(fit.rf.sat, data_hs.testing) - data_hs.testing$total_sat
+mse.residuals.sat.rf <- mean((residuals.sat.rf[!(is.na(residuals.sat.rf))])^2)
 
 plot(x = (predict(fit.rf.sat, data_hs.testing)), y = data_hs.testing$total_sat)
 
@@ -294,6 +294,8 @@ fit.rf.gradrate <- randomForest(x_graduated~., data_hs_gradrate, mtry=7, ntree=5
 plot(fit.rf.gradrate, col="red", pch=16, type="p",
 main="default plot, ")
 
+residuals.gradrate.rf <- predict(fit.rf.gradrate, data_hs.testing) - data_hs.testing$x_graduated
+mse.residuals.gradrate.rf <- mean((residuals.gradrate.rf[!(is.na(residuals.gradrate.rf))])^2)
 
 plot(x = (predict(fit.rf.gradrate, data_hs.testing)), y = data_hs.testing$x_graduated)
 
@@ -318,6 +320,9 @@ lines(1:19, rf.error.p.college)
 fit.rf.college <- randomForest(x_attending_college~., data_hs_college, mtry=6, ntree=500)
 plot(fit.rf.gradrate, col="red", pch=16, type="p",
 main="default plot, ")
+
+residuals.college.rf <- predict(fit.rf.college, data_hs.testing) - data_hs.testing$x_attending_college
+mse.residuals.college.rf <- mean((residuals.college.rf[!(is.na(residuals.college.rf))])^2)
 
 
 plot(x = (predict(fit.rf.college, data_hs.testing)), y = data_hs.testing$x_attending_college)
